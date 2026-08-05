@@ -279,6 +279,40 @@ body {
     color: var(--accent);
   }
 
+  /* ── Export button ── */
+  .btn-export {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-family: var(--sans);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .btn-export:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .btn-export:hover svg { fill: #fff; }
+
+  .btn-export svg {
+    width: 13px;
+    height: 13px;
+    fill: var(--text-muted);
+    flex-shrink: 0;
+    transition: fill 0.15s;
+  }
+
   /* ── Link cards ── */
   #results {
     display: flex;
@@ -303,6 +337,12 @@ body {
     border-radius: var(--radius);
     overflow: hidden;
     transition: border-color 0.15s, background 0.3s, opacity 0.18s ease, transform 0.18s ease;
+  }
+
+  /* Animación de entrada: se aplica solo una vez al crear la tarjeta
+     (clase eliminada tras terminar) para no interferir con las
+     transiciones de opacidad/transform usadas al filtrar. */
+  .card.card-enter {
     animation: cardIn 0.22s ease both;
   }
 

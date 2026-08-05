@@ -71,7 +71,7 @@
       }
 
       const card = document.createElement('div');
-      card.className = `card ${!isValidAlias ? 'warning' : ''}`;
+      card.className = `card card-enter ${!isValidAlias ? 'warning' : ''}`;
       card.dataset.alias = alias; // Dato para filtrar luego
       card.innerHTML = `
         <div class="card-header">
@@ -109,6 +109,7 @@
         </div>
       `;
       card.style.animationDelay = `${i * 30}ms`;
+      card.addEventListener('animationend', () => card.classList.remove('card-enter'), { once: true });
       results.appendChild(card);
     });
 
@@ -130,6 +131,54 @@
 
     // Actualizar el contador general
     updateVisibleCount();
+  }
+
+  // Exporta a CSV las tarjetas visibles según el filtro activo
+  function exportCSV() {
+    const activeBtn = document.querySelector('.filter-btn.active');
+    const filterLabel = activeBtn ? activeBtn.textContent.trim() : 'todos';
+
+    const visibleCards = Array.from(document.querySelectorAll('.card'))
+      .filter(card => !card.classList.contains('card-collapsed') && !card.classList.contains('card-hidden'));
+
+    if (!visibleCards.length) return;
+
+    const rows = [['#', 'title', 'alias', 'url', 'conversion']];
+
+    visibleCards.forEach(card => {
+      const inputs = card.querySelectorAll('.field-input');
+      const index = card.querySelector('.link-index')?.textContent.replace('#', '') || '';
+      const title = inputs[0]?.value || '';
+      const alias = inputs[1]?.value || '';
+      const url   = inputs[2]?.value || '';
+      const conv  = card.querySelector('.field-checkbox span')?.textContent || '';
+      rows.push([index, title, alias, url, conv]);
+    });
+
+    const csvContent = rows
+      .map(row => row.map(csvEscape).join(','))
+      .join('\r\n');
+
+    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const safeFilter = filterLabel.replace(/[^\w-]+/g, '_').toLowerCase();
+    const timestamp = new Date().toISOString().slice(0, 10);
+
+    a.href = url;
+    a.download = `sfmc-links_${safeFilter}_${timestamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function csvEscape(value) {
+    const str = String(value ?? '');
+    if (/[",\n\r]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
   }
 
   function escapeHtml(str) {
