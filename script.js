@@ -25,6 +25,7 @@
     results.innerHTML = '';
     wrapper.style.display = 'none';
     empty.classList.remove('visible');
+    renderAssetBox([]);
 
     if (!html) return;
 
@@ -38,6 +39,7 @@
     }
 
     let warningCount = 0;
+    const assetNames = [];
     wrapper.style.display = 'block';
 
     links.forEach((link, i) => {
@@ -74,6 +76,10 @@
 
       const hasWarning = !isValidAlias || missingConversion;
       if (hasWarning) warningCount++;
+
+      // Extraer el nombre del asset a partir del alias (solo enlaces C_/c_)
+      const assetName = parseAssetFromAlias(alias);
+      if (assetName) assetNames.push(assetName);
 
       const badges = [];
       if (!isValidAlias) {
@@ -146,6 +152,69 @@
 
     // Actualizar el contador general
     updateVisibleCount();
+
+    // Detectar y validar el nombre del asset a partir de los alias C_
+    renderAssetBox(assetNames);
+  }
+
+  // Extrae "{campaña}: Email {n}[letra]" de un alias C_/c_ del tipo
+  // C_IT_ALL_MultibrandGPPart2_Sep26_Email1A_Star1 -> "IT_ALL_MultibrandGPPart2_Sep26: Email 1A"
+  // C_IT_ALL_MultibrandGPPart2_Sep26_Email4_CTA2   -> "IT_ALL_MultibrandGPPart2_Sep26: Email 4"
+  function parseAssetFromAlias(alias) {
+    if (!alias) return null;
+    const isCAlias = alias.startsWith('C_') || alias.startsWith('c_');
+    if (!isCAlias) return null;
+
+    const rest = alias.slice(2);
+    const match = rest.match(/^(.+?)_email(\d+[a-z]?)/i);
+    if (!match) return null;
+
+    const campaign = match[1];
+    const emailNum = match[2];
+    return `${campaign}: Email ${emailNum}`;
+  }
+
+  // Muestra el cajón de asset detectado y comprueba que sea coherente
+  // en todos los enlaces C_ (mismo nombre de asset en todos ellos)
+  function renderAssetBox(assetNames) {
+    const box   = document.getElementById('asset-box');
+    const badge = document.getElementById('asset-box-badge');
+    const body  = document.getElementById('asset-box-body');
+
+    if (!box || !badge || !body) return;
+
+    if (!assetNames.length) {
+      box.style.display = 'none';
+      body.innerHTML = '';
+      return;
+    }
+
+    box.style.display = 'block';
+
+    const counts = new Map();
+    assetNames.forEach(name => counts.set(name, (counts.get(name) || 0) + 1));
+    const uniqueNames = Array.from(counts.keys());
+
+    if (uniqueNames.length === 1) {
+      badge.textContent = '✓ Coherente';
+      badge.className = 'asset-box-badge ok';
+      body.innerHTML = `
+        <div class="row">
+          <input class="field-input" value="${escapeHtml(uniqueNames[0])}" readonly>
+          <button class="btn-copy" onclick="copyValue(this)" title="Copiar nombre del asset">📋</button>
+        </div>
+      `;
+    } else {
+      badge.textContent = `⚠️ ${uniqueNames.length} nombres distintos`;
+      badge.className = 'asset-box-badge warn';
+      body.innerHTML = uniqueNames.map(name => `
+        <div class="row">
+          <input class="field-input" value="${escapeHtml(name)}" readonly>
+          <span class="asset-count">${counts.get(name)} enlace${counts.get(name) > 1 ? 's' : ''}</span>
+          <button class="btn-copy" onclick="copyValue(this)" title="Copiar nombre del asset">📋</button>
+        </div>
+      `).join('');
+    }
   }
 
   // Genera el CSV (y la etiqueta del filtro activo) a partir de las tarjetas visibles
@@ -158,7 +227,27 @@
 
     if (!visibleCards.length) return null;
 
-    const rows = [['#', 'title', 'alias', 'url', 'conversion']];
+    const rows = [];
+
+    // Si se detectó un Campaign Asset, incluirlo junto con su valor antes de la tabla
+    const allAliases = Array.from(document.querySelectorAll('.card')).map(c => c.dataset.alias || '');
+    const assetNames = allAliases.map(parseAssetFromAlias).filter(Boolean);
+    if (assetNames.length) {
+      const counts = new Map();
+      assetNames.forEach(name => counts.set(name, (counts.get(name) || 0) + 1));
+      const uniqueNames = Array.from(counts.keys());
+
+      if (uniqueNames.length === 1) {
+        rows.push(['Campaign Asset', uniqueNames[0]]);
+      } else {
+        uniqueNames.forEach(name => {
+          rows.push(['Campaign Asset', name, `${counts.get(name)} enlaces`]);
+        });
+      }
+      rows.push([]);
+    }
+
+    rows.push(['#', 'title', 'alias', 'url', 'conversion']);
 
     visibleCards.forEach(card => {
       const inputs = card.querySelectorAll('.field-input');
