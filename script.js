@@ -60,8 +60,6 @@
   alias.startsWith('C_') ||
   alias.startsWith('c_') ||
   alias.startsWith('N_');
-      if (!isValidAlias) warningCount++;
-      const warningBadge = !isValidAlias ? `<span class="badge-warning" title="Alias no empieza por C_ ni N_">⚠️ Formato incorrecto</span>` : '';
 
       // Determinar estado de 'conversion'
       const isConversion = conversionAttr && conversionAttr.toLowerCase() === 'true';
@@ -70,9 +68,26 @@
         conversionLabel = conversionAttr;
       }
 
+      // Los alias C_/c_ deben llevar conversion="true"; si falta o es false, es un aviso
+      const isCAlias = alias.startsWith('C_') || alias.startsWith('c_');
+      const missingConversion = isCAlias && !isConversion;
+
+      const hasWarning = !isValidAlias || missingConversion;
+      if (hasWarning) warningCount++;
+
+      const badges = [];
+      if (!isValidAlias) {
+        badges.push(`<span class="badge-warning" title="Alias no empieza por C_ ni N_">⚠️ Formato incorrecto</span>`);
+      }
+      if (missingConversion) {
+        badges.push(`<span class="badge-warning" title="Los alias C_ deben tener conversion=&quot;true&quot;">⚠️ Falta conversion</span>`);
+      }
+      const warningBadge = badges.join('');
+
       const card = document.createElement('div');
-      card.className = `card card-enter ${!isValidAlias ? 'warning' : ''}`;
+      card.className = `card card-enter ${hasWarning ? 'warning' : ''}`;
       card.dataset.alias = alias; // Dato para filtrar luego
+      card.dataset.warning = hasWarning ? 'true' : 'false';
       card.innerHTML = `
         <div class="card-header">
           <span class="link-index">#${String(i + 1).padStart(2, '0')}</span>
@@ -133,15 +148,15 @@
     updateVisibleCount();
   }
 
-  // Exporta a CSV las tarjetas visibles según el filtro activo
-  function exportCSV() {
+  // Genera el CSV (y la etiqueta del filtro activo) a partir de las tarjetas visibles
+  function buildCSV() {
     const activeBtn = document.querySelector('.filter-btn.active');
     const filterLabel = activeBtn ? activeBtn.textContent.trim() : 'todos';
 
     const visibleCards = Array.from(document.querySelectorAll('.card'))
       .filter(card => !card.classList.contains('card-collapsed') && !card.classList.contains('card-hidden'));
 
-    if (!visibleCards.length) return;
+    if (!visibleCards.length) return null;
 
     const rows = [['#', 'title', 'alias', 'url', 'conversion']];
 
@@ -159,6 +174,15 @@
       .map(row => row.map(csvEscape).join(','))
       .join('\r\n');
 
+    return { csvContent, filterLabel };
+  }
+
+  // Exporta a CSV las tarjetas visibles según el filtro activo
+  function exportCSV() {
+    const built = buildCSV();
+    if (!built) return;
+    const { csvContent, filterLabel } = built;
+
     const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -171,6 +195,43 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  // Copia el CSV de las tarjetas visibles al portapapeles
+  function copyCSV(btn) {
+    const built = buildCSV();
+    if (!built) return;
+    const { csvContent } = built;
+
+    const showCopied = () => {
+      if (!btn) return;
+      const original = btn.innerHTML;
+      btn.classList.add('copied');
+      btn.innerHTML = '✓ Copiado';
+      setTimeout(() => {
+        btn.innerHTML = original;
+        btn.classList.remove('copied');
+      }, 1200);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(csvContent).then(showCopied).catch(() => fallbackCopyText(csvContent, showCopied));
+    } else {
+      fallbackCopyText(csvContent, showCopied);
+    }
+  }
+
+  // Copia de respaldo por si el navegador no soporta navigator.clipboard
+  function fallbackCopyText(text, onDone) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (onDone) onDone();
   }
 
   function csvEscape(value) {
@@ -218,7 +279,7 @@
           show = alias.trim() === '';
           break;
         case 'warning':
-          show = !alias.startsWith('C_') && !alias.startsWith('N_');
+          show = card.dataset.warning === 'true';
           break;
       }
 

@@ -282,9 +282,15 @@ body {
     color: var(--accent);
   }
 
-  /* ── Export button ── */
-  .btn-export {
+  /* ── Export actions ── */
+  .results-actions {
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-export {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -314,6 +320,12 @@ body {
     fill: var(--text-muted);
     flex-shrink: 0;
     transition: fill 0.15s;
+  }
+
+  .btn-export.copied {
+    background: #052e16;
+    border-color: var(--green);
+    color: var(--green);
   }
 
   /* ── Link cards ── */
