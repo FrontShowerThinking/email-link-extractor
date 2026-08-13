@@ -308,7 +308,7 @@ body {
   }
 
   .asset-box-badge.ok {
-    background: #052e16;
+    background: #b5ffd4;
     color: var(--green);
     border: 1px solid var(--green);
   }
