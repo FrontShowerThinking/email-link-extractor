@@ -74,7 +74,11 @@
       const isCAlias = alias.startsWith('C_') || alias.startsWith('c_');
       const missingConversion = isCAlias && !isConversion;
 
-      const hasWarning = !isValidAlias || missingConversion;
+      // Los alias N_ deben llevar conversion="false" o no tener el atributo; si es "true", es un error
+      const isNAlias = alias.startsWith('N_');
+      const unexpectedConversion = isNAlias && isConversion;
+
+      const hasWarning = !isValidAlias || missingConversion || unexpectedConversion;
       if (hasWarning) warningCount++;
 
       // Extraer el nombre del asset a partir del alias (solo enlaces C_/c_)
@@ -86,7 +90,10 @@
         badges.push(`<span class="badge-warning" title="Alias no empieza por C_ ni N_">⚠️ Formato incorrecto</span>`);
       }
       if (missingConversion) {
-        badges.push(`<span class="badge-warning" title="Los alias C_ deben tener conversion=&quot;true&quot;">⚠️ Falta conversion</span>`);
+        badges.push(`<span class="badge-warning" title="Los alias C_ deben tener conversion=&quot;true&quot;">⚠️ Conversion Error</span>`);
+      }
+      if (unexpectedConversion) {
+        badges.push(`<span class="badge-warning" title="Los alias N_ deben tener conversion=&quot;false&quot; o no tener el atributo">⚠️ Conversion Error</span>`);
       }
       const warningBadge = badges.join('');
 
