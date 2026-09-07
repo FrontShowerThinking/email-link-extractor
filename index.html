@@ -30,7 +30,16 @@
 
   <!-- Input -->
   <div class="input-block">
-    <label for="source">HTML del email</label>
+    <div class="input-block-header">
+      <label for="source">HTML del email</label>
+      <div class="business-select">
+        <label for="business-select">Business</label>
+        <select id="business-select" onchange="onBusinessChange()">
+          <option value="grunenthal">Grünenthal</option>
+          <option value="esteve">Esteve</option>
+        </select>
+      </div>
+    </div>
     <textarea id="source" placeholder="Pega aquí el HTML completo del email…"></textarea>
     <button class="btn-extract" onclick="extractLinks()">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

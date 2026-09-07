@@ -150,6 +150,42 @@ body {
     color: var(--text-muted);
   }
 
+  .input-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .business-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .business-select label {
+    margin: 0;
+  }
+
+  .business-select select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 8px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .business-select select:focus,
+  .business-select select:hover {
+    border-color: var(--accent);
+  }
+
   textarea {
     width: 100%;
     height: 200px;

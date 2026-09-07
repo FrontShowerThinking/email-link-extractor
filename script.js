@@ -164,21 +164,65 @@
     renderAssetBox(assetNames);
   }
 
-  // Extrae "{campaña}: Email {n}[letra]" de un alias C_/c_ del tipo
-  // C_IT_ALL_MultibrandGPPart2_Sep26_Email1A_Star1 -> "IT_ALL_MultibrandGPPart2_Sep26: Email 1A"
-  // C_IT_ALL_MultibrandGPPart2_Sep26_Email4_CTA2   -> "IT_ALL_MultibrandGPPart2_Sep26: Email 4"
+  // Reglas de extracción del nombre del asset a partir del alias C_, una por business.
+  // Cada regla recibe el alias completo y devuelve el nombre del asset o null si no aplica.
+  const BUSINESS_RULES = {
+    // C_IT_ALL_MultibrandGPPart2_Sep26_Email1A_Star1 -> "IT_ALL_MultibrandGPPart2_Sep26: Email 1A"
+    // C_IT_ALL_MultibrandGPPart2_Sep26_Email4_CTA2   -> "IT_ALL_MultibrandGPPart2_Sep26: Email 4"
+    grunenthal: {
+      label: 'Grünenthal',
+      parse(alias) {
+        if (!alias) return null;
+        const isCAlias = alias.startsWith('C_') || alias.startsWith('c_');
+        if (!isCAlias) return null;
+
+        const rest = alias.slice(2);
+        const match = rest.match(/^(.+?)_email(\d+[a-z]?)/i);
+        if (!match) return null;
+
+        return `${match[1]}: Email ${match[2]}`;
+      }
+    },
+    // C_CTA1_ES_CEF_CMX_MitoRealidadCalmiox_Sep26_Email1A -> "ES_CEF_CMX_MitoRealidadCalmiox_Sep26: Email 1A"
+    // El primer segmento tras "C_" (p.ej. "CTA1") identifica el link, no el asset, y se descarta.
+    esteve: {
+      label: 'Esteve',
+      parse(alias) {
+        if (!alias) return null;
+        const isCAlias = alias.startsWith('C_') || alias.startsWith('c_');
+        if (!isCAlias) return null;
+
+        const rest = alias.slice(2);
+        const firstUnderscore = rest.indexOf('_');
+        if (firstUnderscore === -1) return null;
+        const withoutLinkTag = rest.slice(firstUnderscore + 1);
+
+        const match = withoutLinkTag.match(/^(.+?)_email(\d+[a-z]?)/i);
+        if (!match) return null;
+
+        return `${match[1]}: Email ${match[2]}`;
+      }
+    }
+  };
+
+  function getCurrentBusiness() {
+    const select = document.getElementById('business-select');
+    return (select && select.value) || 'grunenthal';
+  }
+
+  // Extrae "{campaña}: Email {n}[letra]" de un alias C_/c_ aplicando la regla del business activo
   function parseAssetFromAlias(alias) {
-    if (!alias) return null;
-    const isCAlias = alias.startsWith('C_') || alias.startsWith('c_');
-    if (!isCAlias) return null;
+    const business = BUSINESS_RULES[getCurrentBusiness()] || BUSINESS_RULES.grunenthal;
+    return business.parse(alias);
+  }
 
-    const rest = alias.slice(2);
-    const match = rest.match(/^(.+?)_email(\d+[a-z]?)/i);
-    if (!match) return null;
-
-    const campaign = match[1];
-    const emailNum = match[2];
-    return `${campaign}: Email ${emailNum}`;
+  // Cambia el business activo, lo recuerda, y vuelve a extraer si ya había HTML pegado
+  function onBusinessChange() {
+    const business = getCurrentBusiness();
+    localStorage.setItem('business', business);
+    if (document.getElementById('source').value.trim()) {
+      extractLinks();
+    }
   }
 
   // Muestra el cajón de asset detectado y comprueba que sea coherente
@@ -428,4 +472,11 @@
   if (localStorage.getItem('theme') === 'dark') {
     document.documentElement.dataset.theme = 'dark';
     themeToggle.textContent = '☀️ Light';
+  }
+
+  // Restaurar el business elegido la última vez (por defecto Grünenthal)
+  const savedBusiness = localStorage.getItem('business');
+  if (savedBusiness && BUSINESS_RULES[savedBusiness]) {
+    const businessSelect = document.getElementById('business-select');
+    if (businessSelect) businessSelect.value = savedBusiness;
   }
