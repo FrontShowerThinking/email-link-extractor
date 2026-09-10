@@ -78,7 +78,11 @@
       const isNAlias = alias.startsWith('N_');
       const unexpectedConversion = isNAlias && isConversion;
 
-      const hasWarning = !isValidAlias || missingConversion || unexpectedConversion;
+      // Un href que es exactamente "#", "http://#" o "https://#" es un placeholder sin URL real
+      const cleanUrl = url.trim();
+      const isMissingUrl = cleanUrl === '#' || cleanUrl === 'http://#' || cleanUrl === 'https://#';
+
+      const hasWarning = !isValidAlias || missingConversion || unexpectedConversion || isMissingUrl;
       if (hasWarning) warningCount++;
 
       // Extraer el nombre del asset a partir del alias (solo enlaces C_/c_)
@@ -95,12 +99,16 @@
       if (unexpectedConversion) {
         badges.push(`<span class="badge-warning" title="Los alias N_ deben tener conversion=&quot;false&quot; o no tener el atributo">⚠️ Conversion Error</span>`);
       }
+      if (isMissingUrl) {
+        badges.push(`<span class="badge-warning" title="El href contiene &quot;#&quot;, no es una URL real">⚠️ Missing URL</span>`);
+      }
       const warningBadge = badges.join('');
 
       const card = document.createElement('div');
       card.className = `card card-enter ${hasWarning ? 'warning' : ''}`;
       card.dataset.alias = alias; // Dato para filtrar luego
       card.dataset.warning = hasWarning ? 'true' : 'false';
+      card.dataset.missingUrl = isMissingUrl ? 'true' : 'false'; // Para excluirlo del CSV
       card.innerHTML = `
         <div class="card-header">
           <span class="link-index">#${String(i + 1).padStart(2, '0')}</span>
@@ -301,6 +309,9 @@
     rows.push(['#', 'title', 'alias', 'url', 'conversion']);
 
     visibleCards.forEach(card => {
+      // Los enlaces con href="#" (sin URL real) se excluyen del CSV
+      if (card.dataset.missingUrl === 'true') return;
+
       const inputs = card.querySelectorAll('.field-input');
       const index = card.querySelector('.link-index')?.textContent.replace('#', '') || '';
       const title = inputs[0]?.value || '';
